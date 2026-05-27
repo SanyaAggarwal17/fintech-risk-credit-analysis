@@ -16,10 +16,17 @@ DB_NAME = os.getenv("DB_NAME", "fintech_analytics")
 
 
 def write_dataframe_to_postgres(df: pd.DataFrame):
-    conn = psycopg2.connect(host=DB_HOST, port=DB_PORT, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD
+    )
+
     cursor = conn.cursor()
-    cursor.execute(
-        """
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS credit_analytics (
             customer_id INTEGER,
             income NUMERIC,
@@ -30,15 +37,33 @@ def write_dataframe_to_postgres(df: pd.DataFrame):
             status TEXT,
             interest_rate DOUBLE PRECISION
         );
-        """
-    )
+    """)
+
     insert_query = """
         INSERT INTO credit_analytics (
-            customer_id, income, monthly_debt, credit_score, employment_years, dti, status, interest_rate
+            customer_id,
+            income,
+            monthly_debt,
+            credit_score,
+            employment_years,
+            dti,
+            status,
+            interest_rate
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """
-    for row in df.to_records(index=False):
-        cursor.execute(insert_query, tuple(row))
+    """
+
+    for _, row in df.iterrows():
+        cursor.execute(insert_query, (
+            int(row["customer_id"]),
+            float(row["income"]),
+            float(row["monthly_debt"]),
+            int(row["credit_score"]),
+            int(row["employment_years"]),
+            float(row["dti"]),
+            str(row["status"]),
+            float(row["interest_rate"])
+        ))
+
     conn.commit()
     cursor.close()
     conn.close()
